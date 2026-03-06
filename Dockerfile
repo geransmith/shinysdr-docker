@@ -52,12 +52,9 @@ RUN apt-get install -y \
 
 WORKDIR /build
 
-# Download required files directly instead of copying from assets
-RUN apt-get install -y wget && \
-    wget https://bootstrap.pypa.io/pip/3.8/get-pip.py -O /tmp/get-pip.py && \
-    wget https://sourceforge.net/projects/wsjt/files/wsjtx-2.7.0/wsjtx-2.7.0.tgz/download -O /tmp/wsjtx-2.7.0.tgz && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+# Download necessary files using curl (already available in Ubuntu 20.04)
+RUN curl -o /tmp/get-pip.py https://bootstrap.pypa.io/pip/3.8/get-pip.py && \
+    curl -L -o /tmp/wsjtx-2.7.0.tgz https://sourceforge.net/projects/wsjt/files/wsjtx-2.7.0/wsjtx-2.7.0.tgz/download
 
 RUN python3 /tmp/get-pip.py && \
     pip install --upgrade pip
