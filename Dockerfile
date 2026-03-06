@@ -67,20 +67,6 @@ RUN tar zxvf /tmp/wsjtx-2.7.0.tgz && \
   cmake --build . && cmake --build . --target install && ldconfig && \
   cd /build && rm -rf wsjtx-2.7.0
 
-# Use master branch instead of gr37 tag
-RUN apt-get update && apt-get install -y \
-    python3-pyqt5 \
-    python3-pyqt5.qtsvg && \
-    git clone https://github.com/bistromath/gr-air-modes.git && \
-    cd gr-air-modes && \
-    # Use master branch (Python 3 + GNU Radio 3.8 compatible)
-    # git checkout tags/gr37 && \  # REMOVE this line
-    mkdir build && cd build && \
-    cmake ../ && make && make install && ldconfig && \
-    cd /build && rm -rf gr-air-modes && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
 # Rest of your modules remain the same...
 RUN git clone https://github.com/EliasOenal/multimon-ng.git && \
   cd multimon-ng && \
