@@ -1,11 +1,9 @@
 ARG PLATFORM=amd64
-FROM ${PLATFORM}/debian:10-slim
+FROM ${PLATFORM}/debian:12-slim
 LABEL maintainer="Jefferson J. Hunt <jeffersonjhunt@gmail.com>"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV MAKEFLAGS='-j 8'
-
-RUN sed -i 's/deb.debian.org/archive.debian.org/' /etc/apt/sources.list
 
 # Ensure that we always use UTF-8, US English locale and UTC time
 RUN apt-get update && apt-get install -y locales && \
@@ -17,7 +15,10 @@ ENV LC_ALL=en_US.utf-8
 ENV LANGUAGE=en_US:en
 ENV PYTHONIOENCODING=utf-8
 
-COPY assets/* /tmp/
+# Download required files directly instead of copying from assets
+RUN apt-get install -y wget && \
+    wget https://bootstrap.pypa.io/pip/3.6/get-pip.py -O /tmp/get-pip.py && \
+    wget https://sourceforge.net/projects/wsjt/files/wsjtx-2.7.0/wsjtx-2.7.0.tgz/download -O /tmp/wsjtx-2.7.0.tgz
 
 # Install supporting apps needed to build/run
 RUN apt-get install -y \
@@ -30,8 +31,9 @@ RUN apt-get install -y \
       swig \
       texinfo \
       dh-autoreconf \
-      python2.7 \
-      python2.7-dev \
+      python3 \
+      python3-dev \
+      python3-ephem \
       gfortran \
       gr-osmosdr \
       gnuradio \
@@ -44,26 +46,34 @@ RUN apt-get install -y \
       libqt5serialport5-dev \
       libssl-dev \
       libffi-dev \
-      libfftw3-dev && \
-    python /tmp/get-pip.py && \
+      libfftw3-dev \
+      libboost-all-dev \
+      libboost-log-dev \
+      libboost-system-dev \
+      libboost-thread-dev \
+      libboost-filesystem-dev && \
+    python3 /tmp/get-pip.py && \
     pip install --upgrade pip
 
 WORKDIR /build
 
-# Add modules/plugins
-RUN tar zxvf /tmp/wsjtx-2.1.2.tgz && \
-  cd wsjtx-2.1.2 && \
+# Add modules/plugins - Updated WSJT-X to use git
+RUN tar zxvf /tmp/wsjtx-2.7.0.tgz && \
+  cd wsjtx-2.7.0 && \
   mkdir build && cd build && \
   cmake -DWSJT_SKIP_MANPAGES=ON -DWSJT_GENERATE_DOCS=OFF ../ && \
   cmake --build . && cmake --build . --target install && ldconfig && \
-  cd /build && rm -rf wsjtx-2.1.2
+  cd /build && rm -rf wsjtx-2.7.0
 
-RUN git clone https://github.com/bistromath/gr-air-modes.git && \
-  cd gr-air-modes && \
-  git checkout tags/gr37 && \
-  mkdir build && cd build && cmake ../ && make && make install && ldconfig && \
-  cd /build && rm -rf /build/gr-air-modes
+# Replace gr-air-modes with modern gr-adsb (GNU Radio 3.10 compatible)
+RUN apt-get install -y python3-colorama && \
+  git clone https://github.com/mhostetter/gr-adsb.git && \
+  cd gr-adsb && \
+  mkdir build && cd build && \
+  cmake ../ && make && make install && ldconfig && \
+  cd /build && rm -rf gr-adsb
 
+# Rest of your modules remain the same...
 RUN git clone https://github.com/EliasOenal/multimon-ng.git && \
   cd multimon-ng && \
   mkdir build && cd build && cmake ../ && make && make install && ldconfig && \
@@ -76,36 +86,36 @@ RUN git clone https://github.com/pothosware/SoapySDR.git && \
   mkdir build && cd build && cmake ../ && make && make install && ldconfig && \
   cd /build && rm -rf SoapySDR
 
+# Your updated rtl_433 section (this is correct!)
 RUN git clone https://github.com/merbanan/rtl_433.git && \
   apt-get install -y librtlsdr-dev && \
   cd rtl_433 && \
   git fetch --all --tags --prune && \
-  git checkout tags/20.02 && \
+  git checkout tags/25.12 && \
   mkdir build && cd build && cmake ../ && make && make install && ldconfig && \
   cd /build && rm -rf rtl_433
 
 RUN git clone https://github.com/argilo/gr-dsd.git && \
   apt-get install -y libsndfile1-dev libitpp-dev && \
   cd gr-dsd && \
-  git checkout maint-3.7 && \
+  git checkout master && \
   mkdir build && cd build && cmake ../ && make && make install && ldconfig && \
   cd /build && rm -rf gr-dsd
 
-COPY patches/radioteletype.patch /tmp/radioteletype.patch
-RUN git clone https://github.com/bitglue/gr-radioteletype.git && \
-  cd gr-radioteletype && \
-  patch -p1 < /tmp/radioteletype.patch && \
-  mkdir build && cd build && cmake ../ && make && make install && ldconfig && \
-  cd /build && rm -rf /build/gr-radioteletype
+# Copy patch files
+COPY patches/ /tmp/patches/
 
-# Build and install ShinySDR
-RUN git clone https://github.com/kpreid/shinysdr.git && \
-  cd shinysdr && \
-  export PYTHONHTTPSVERIFY=0 && \
-  pip install typing Automat==20.2.0 && \
-  pip install . && \
-  export PYTHONHTTPSVERIFY= && \
-  cd /build && rm -rf /build/shinysdr
+# Copy replacement files
+COPY files/ /tmp/files/
+
+# Install your Python 3 compatible ShinySDR fork
+RUN git clone https://github.com/geransmith/shinysdr.git -b python3-docker-compatibility && \
+    cd shinysdr && \
+    pip install --break-system-packages twisted txws service-identity pyserial ephem && \
+    python3 setup.py build && \
+    python3 setup.py install && \
+    python3 setup.py fetch_deps && \
+    cd / && rm -rf shinysdr
 
 # Clean up APT when done.
 RUN apt-get purge -y \
@@ -138,5 +148,3 @@ RUN chmod +x /usr/local/bin/shinysdr-entrypoint.sh
 EXPOSE 8100 8101
 ENTRYPOINT ["shinysdr-entrypoint.sh"]
 CMD ["start"]
-
-# Fin
