@@ -49,8 +49,6 @@ RUN apt-get install -y \
       libboost-filesystem-dev && \
       apt-get clean && \
       rm -rf /var/lib/apt/lists/*
-      apt-get clean && \
-      rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
 
