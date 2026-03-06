@@ -67,13 +67,14 @@ RUN tar zxvf /tmp/wsjtx-2.7.0.tgz && \
   cmake --build . && cmake --build . --target install && ldconfig && \
   cd /build && rm -rf wsjtx-2.7.0
 
-# Install gr-air-modes (GNU Radio 3.8 compatible)
+# Use master branch instead of gr37 tag
 RUN apt-get update && apt-get install -y \
-    python3-zmq \
     python3-pyqt5 \
     python3-pyqt5.qtsvg && \
-    git clone https://github.com/EricPihlstrom/gr-air-modes-update.git gr-air-modes && \
+    git clone https://github.com/bistromath/gr-air-modes.git && \
     cd gr-air-modes && \
+    # Use master branch (Python 3 + GNU Radio 3.8 compatible)
+    # git checkout tags/gr37 && \  # REMOVE this line
     mkdir build && cd build && \
     cmake ../ && make && make install && ldconfig && \
     cd /build && rm -rf gr-air-modes && \
