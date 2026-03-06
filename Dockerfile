@@ -67,13 +67,18 @@ RUN tar zxvf /tmp/wsjtx-2.7.0.tgz && \
   cmake --build . && cmake --build . --target install && ldconfig && \
   cd /build && rm -rf wsjtx-2.7.0
 
-# Replace gr-air-modes with modern gr-adsb (GNU Radio 3.10 compatible)
-RUN apt-get install -y python3-colorama && \
-  git clone https://github.com/mhostetter/gr-adsb.git && \
-  cd gr-adsb && \
-  mkdir build && cd build && \
-  cmake ../ && make && make install && ldconfig && \
-  cd /build && rm -rf gr-adsb
+# Install gr-air-modes (GNU Radio 3.8 compatible)
+RUN apt-get update && apt-get install -y \
+    python3-zmq \
+    python3-pyqt5 \
+    python3-pyqt5.qtsvg && \
+    git clone https://github.com/EricPihlstrom/gr-air-modes-update.git gr-air-modes && \
+    cd gr-air-modes && \
+    mkdir build && cd build && \
+    cmake ../ && make && make install && ldconfig && \
+    cd /build && rm -rf gr-air-modes && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # Rest of your modules remain the same...
 RUN git clone https://github.com/EliasOenal/multimon-ng.git && \
