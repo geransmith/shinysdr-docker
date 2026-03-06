@@ -1,24 +1,19 @@
 ARG PLATFORM=amd64
-FROM ${PLATFORM}/debian:12-slim
+FROM ${PLATFORM}/ubuntu:20.04
 LABEL maintainer="Jefferson J. Hunt <jeffersonjhunt@gmail.com>"
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV MAKEFLAGS='-j 8'
 
-# Ensure that we always use UTF-8, US English locale and UTC time
+# Update package lists and install locales first
 RUN apt-get update && apt-get install -y locales && \
   localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8 && \
   echo "UTC" > /etc/timezone && \
   chmod 0755 /etc/timezone 
+
 ENV LANG=en_US.utf8
 ENV LC_ALL=en_US.utf-8
 ENV LANGUAGE=en_US:en
-ENV PYTHONIOENCODING=utf-8
-
-# Download required files directly instead of copying from assets
-RUN apt-get install -y wget && \
-    wget https://bootstrap.pypa.io/pip/3.6/get-pip.py -O /tmp/get-pip.py && \
-    wget https://sourceforge.net/projects/wsjt/files/wsjtx-2.7.0/wsjtx-2.7.0.tgz/download -O /tmp/wsjtx-2.7.0.tgz
 
 # Install supporting apps needed to build/run
 RUN apt-get install -y \
@@ -36,8 +31,8 @@ RUN apt-get install -y \
       python3-ephem \
       gfortran \
       gr-osmosdr \
-      gnuradio \
-      gnuradio-dev \
+      gnuradio=3.8.* \
+      gnuradio-dev=3.8.* \
       libudev-dev \
       libusb-1.0-0-dev \
       qttools5-dev \
@@ -52,10 +47,22 @@ RUN apt-get install -y \
       libboost-system-dev \
       libboost-thread-dev \
       libboost-filesystem-dev && \
-    python3 /tmp/get-pip.py && \
-    pip install --upgrade pip
+      apt-get clean && \
+      rm -rf /var/lib/apt/lists/*
+      apt-get clean && \
+      rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
+
+# Download required files directly instead of copying from assets
+RUN apt-get install -y wget && \
+    wget https://bootstrap.pypa.io/pip/3.8/get-pip.py -O /tmp/get-pip.py && \
+    wget https://sourceforge.net/projects/wsjt/files/wsjtx-2.7.0/wsjtx-2.7.0.tgz/download -O /tmp/wsjtx-2.7.0.tgz && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN python3 /tmp/get-pip.py && \
+    pip install --upgrade pip
 
 # Add modules/plugins - Updated WSJT-X to use git
 RUN tar zxvf /tmp/wsjtx-2.7.0.tgz && \
