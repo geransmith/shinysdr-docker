@@ -102,12 +102,6 @@ RUN git clone https://github.com/argilo/gr-dsd.git && \
   mkdir build && cd build && cmake ../ && make && make install && ldconfig && \
   cd /build && rm -rf gr-dsd
 
-# Copy patch files
-COPY patches/ /tmp/patches/
-
-# Copy replacement files
-COPY files/ /tmp/files/
-
 # Install your Python 3 compatible ShinySDR fork
 RUN git clone https://github.com/geransmith/shinysdr.git -b python3-docker-compatibility && \
     cd shinysdr && \
