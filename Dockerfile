@@ -111,6 +111,9 @@ RUN git clone https://github.com/geransmith/shinysdr.git -b python3-docker-compa
     python3 setup.py fetch_deps && \
     cd / && rm -rf shinysdr
 
+# Lazy temp fix for issue with txWS
+RUN sed -i 's/buf\.tostring()/buf.tobytes()/g' /usr/local/lib/python*/dist-packages/txws.py
+
 # Clean up APT when done.
 RUN apt-get purge -y \
       git \
